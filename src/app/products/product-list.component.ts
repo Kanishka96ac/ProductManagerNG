@@ -1,50 +1,69 @@
-import { Component } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
 import { IProducts } from "./product";
+import { ProductService } from "./product.service";
+import { Subscription } from "rxjs";
 
  
 @Component({
-    selector: 'pm-products',
     templateUrl: './product-list.component.html',
     styleUrls: ['./product-list.component.css']
 })
-export class ProductListComponent {
+export class ProductListComponent implements OnInit, OnDestroy{
+
+    constructor(private productsService: ProductService){
+    }
 
     pageTitle: string = 'Product List!';
     imageWidth = 50;
     imageMargin = 2;
     showImage: boolean = false;
-    listFilter: string = 'cart';
-    products: IProducts[] = [
-        {
-            "productId" : 2,
-            "productName" : "Garden Cart",
-            "productCode" : "GDN-0024",
-            "releaseDate" : "March 18, 2023",
-            "starRating": 4.4,
-            "price": 35.56,
-            "imageUrl": "assets/images/garden_cart.png"
-        },
-        {
-            "productId" : 3,
-            "productName" : "Hammer",
-            "productCode" : "GDC-0027",
-            "releaseDate" : "May 18, 2023",
-            "starRating": 4.7,
-            "price": 65.57,
-            "imageUrl": "assets/images/hammer.png"
-        },
-        {
-            "productId" : 4,
-            "productName" : "Flower Pot",
-            "productCode" : "XRC-0027",
-            "releaseDate" : "January 15, 2023",
-            "starRating": 4.1,
-            "price": 85.57,
-            "imageUrl": "assets/images/leaf_rake.png"
-        }
-    ];
+    errorMessage : string = '';
+    sub!: Subscription ;
+
+
+    private _listFilter: string = '';
+
+    get listFilter(): string{
+        return this._listFilter;
+    }
+
+    set listFilter(val : string){
+        this._listFilter = val;
+        console.log('In setter : ' + val);   
+        this.filteredProducts = this.performFilter(val);
+    }
+
+    filteredProducts: IProducts[] = [];
+    
+
+
+    products: IProducts[] = [];
+
+    performFilter(filterBy: string): IProducts[] {
+        filterBy = filterBy.toLocaleLowerCase();
+        return this.products.filter((product: IProducts) =>
+            product.productName.toLocaleLowerCase().includes(filterBy));
+    }
 
     toggleImage(): void {
         this.showImage = !this.showImage;
+    }
+
+    ngOnInit(): void {
+        this.sub = this.productsService.getProducts().subscribe({
+            next: products => {
+                this.products = products;
+                this.filteredProducts = this.products;
+            },
+            error: err => this.errorMessage = err
+        });
+    }
+
+    ngOnDestroy(){
+        this.sub.unsubscribe();
+    }
+
+    onRatingClicked(message : string): void {
+        this.pageTitle = 'Product List : ' + message;
     }
 }
